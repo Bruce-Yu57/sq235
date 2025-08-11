@@ -3,26 +3,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>示範：√2 + √3 ≠ √5</title>
+  <title>示範：√2 + √3 ≠ √5（互動含旋轉把手）</title>
   <style>
-    :root{ --scale:80px; --workspace-height:calc(420px * 1.5); --bg:#f7fafc; --accent:#0ea5a4; --muted:#475569 }
+    :root{ --scale:80px; --workspace-height:calc(420px * 1.5); --bg:#f7fafc; --muted:#475569 }
+    *{box-sizing:border-box}
     body{font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans CJK TC", "PingFang TC", "Microsoft JhengHei", Arial, sans-serif; background:var(--bg); color:var(--muted); margin:0; padding:20px}
     h1{margin:0 0 8px; color:#0f172a}
     p.lead{margin:0 0 18px}
 
-    /* workspace enlarged by 50% (原始 420px -> 630px) */
     .workspace{position:relative; width:100%; height:var(--workspace-height); background:linear-gradient(90deg, rgba(2,6,23,0.02), rgba(255,255,255,0)); border:1px dashed #cbd5e1; border-radius:8px; overflow:hidden}
-    .grid{position:absolute; inset:0; background-image: linear-gradient(#e6eef6 1px, transparent 1px), linear-gradient(90deg, #e6eef6 1px, transparent 1px); background-size:20px 20px}
+    .grid{position:absolute; inset:0; background-image: linear-gradient(#e6eef6 1px, transparent 1px), linear-gradient(90deg, #e6eef6 1px, transparent 1px); background-size:20px 20px; z-index:0}
 
-    /* squares: ensure width and height are equal so they look like 正方形 */
-    .square{position:absolute; touch-action:none; user-select:none; border:3px solid; display:flex; align-items:center; justify-content:center; box-sizing:border-box; border-radius:6px}
+    /* square divs (keep width==height to appear as true squares) */
+    .square{position:absolute; touch-action:none; user-select:none; border:3px solid; display:flex; align-items:center; justify-content:center; border-radius:6px; transform-origin:center center}
     .sq-label{background:rgba(255,255,255,0.92); padding:4px 6px; border-radius:4px; font-weight:700; font-size:14px; color:#0f172a}
+    .sq-a{border-color:#ef4444; background:linear-gradient(180deg, rgba(239,68,68,0.06), rgba(239,68,68,0.01)); z-index:10}
+    .sq-b{border-color:#f59e0b; background:linear-gradient(180deg, rgba(245,158,11,0.06), rgba(245,158,11,0.01)); z-index:10}
+    .sq-c{border-color:#06b6d4; background:linear-gradient(180deg, rgba(6,182,212,0.06), rgba(6,182,212,0.01)); z-index:10}
 
-    .sq-a{border-color:#ef4444; background:linear-gradient(180deg, rgba(239,68,68,0.06), rgba(239,68,68,0.01))}
-    .sq-b{border-color:#f59e0b; background:linear-gradient(180deg, rgba(245,158,11,0.06), rgba(245,158,11,0.01))}
-    .sq-c{border-color:#06b6d4; background:linear-gradient(180deg, rgba(6,182,212,0.06), rgba(6,182,212,0.01))}
+    /* rotate handle (像 PPT 的圓環箭頭) */
+    .rotate-handle{position:absolute; width:22px; height:22px; border-radius:50%; background:#ffd166; border:2px solid #f97316; display:flex; align-items:center; justify-content:center; cursor:grab; z-index:60; box-shadow:0 2px 6px rgba(0,0,0,0.15)}
+    .rotate-handle:active{cursor:grabbing}
+    .rotate-arrow{position:absolute; width:18px; height:18px; transform:translateY(-1px)}
 
-    /* svg overlay for measurements */
+    /* SVG overlay for measurement lines and labels */
     #measureSvg{position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:30}
 
     .controls{margin-top:12px; display:flex; gap:10px; align-items:center}
@@ -38,12 +42,12 @@
 </head>
 <body>
   <h1>圖像示範：為什麼 <span style="color:#0f172a">√2 + √3 ≠ √5</span></h1>
-  <p class="lead">把三個正方形（面積 2、3、5）拖曳到畫面上，觀察邊長與面積的關係。你可以把 √2 與 √3 的邊緣放在同一條直線上，比較合併後的長度與 √5 的邊長差異。</p>
+  <p class="lead">把三個正方形（面積 2、3、5）拖曳到畫面上，觀察邊長與面積的關係。拉動 √5 上方的圓環箭頭把手即可像 PPT 一樣旋轉它。</p>
 
   <div class="workspace" id="workspace">
     <div class="grid"></div>
 
-    <!-- 三個正方形（確保寬高相同，看起來才是正方形） -->
+    <!-- three squares as divs, sizes calculated from scale (scale = 1 unit -> px) -->
     <div class="square sq-a" id="sqA" data-area="2" style="width:calc(var(--scale) * 1.414213562); height:calc(var(--scale) * 1.414213562); left:30px; top:40px">
       <div class="sq-label">面積 = 2<br>邊長 = √2</div>
     </div>
@@ -54,6 +58,11 @@
 
     <div class="square sq-c" id="sqC" data-area="5" style="width:calc(var(--scale) * 2.236067978); height:calc(var(--scale) * 2.236067978); left:360px; top:260px">
       <div class="sq-label">面積 = 5<br>邊長 = √5</div>
+    </div>
+
+    <!-- rotate handle (absolute, positioned dynamically) -->
+    <div id="rotateHandle" class="rotate-handle" title="拖曳旋轉 √5">
+      <svg class="rotate-arrow" viewBox="0 0 24 24"><path d="M12 2v4a6 6 0 1 1-6 6" fill="none" stroke="#7c2d12" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path><path d="M12 2v0" stroke="#7c2d12" stroke-width="1.6" stroke-linecap="round"/></svg>
     </div>
 
     <!-- measurement overlay: shows lines and labels for comparison -->
@@ -76,44 +85,51 @@
     </ul>
   </div>
 
-  <footer>提示：拖曳正方形來排好位置，或按『並排對齊』自動排放並比較。</footer>
+  <footer>提示：拖曳正方形來排好位置；拉動 √5 上方的圓環箭頭把手即可旋轉。</footer>
 
 <script>
 (function(){
-  const scale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--scale')) || 80; // in px
+  const root = document.documentElement;
+  const scale = parseFloat(getComputedStyle(root).getPropertyValue('--scale')) || 80;
   const workspace = document.getElementById('workspace');
   const measureSvg = document.getElementById('measureSvg');
   const measureBox = document.getElementById('measureBox');
+
   const sqA = document.getElementById('sqA');
   const sqB = document.getElementById('sqB');
   const sqC = document.getElementById('sqC');
-  const sqs = [sqA, sqB, sqC];
+  const rotateHandle = document.getElementById('rotateHandle');
 
-  // enable dragging with pointer events
-  sqs.forEach(el => {
+  const squares = [sqA, sqB, sqC];
+
+  // allow dragging of sqA, sqB, sqC (move) while preserving any rotation on sqC
+  squares.forEach(el => {
     el.addEventListener('pointerdown', startDrag);
     function startDrag(e){
+      // ignore if starting drag on rotate handle
+      if(e.target === rotateHandle) return;
       e.preventDefault();
       el.setPointerCapture(e.pointerId);
-      const wsRect = workspace.getBoundingClientRect();
       const rect = el.getBoundingClientRect();
+      const wsRect = workspace.getBoundingClientRect();
       const offsetX = e.clientX - rect.left;
       const offsetY = e.clientY - rect.top;
 
       function onMove(ev){
         let x = ev.clientX - wsRect.left - offsetX;
         let y = ev.clientY - wsRect.top - offsetY;
-        // clamp inside workspace
         x = Math.max(0, Math.min(x, wsRect.width - rect.width));
         y = Math.max(0, Math.min(y, wsRect.height - rect.height));
         el.style.left = x + 'px';
         el.style.top = y + 'px';
+        updateRotateHandlePosition();
         updateMeasurement();
       }
       function onUp(ev){
         el.releasePointerCapture(e.pointerId);
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
+        updateRotateHandlePosition();
         updateMeasurement();
       }
       document.addEventListener('pointermove', onMove);
@@ -121,33 +137,91 @@
     }
   });
 
-  // snap button: align A and B side-by-side and place C below to avoid interference
+  // rotate handle drag logic (像 PPT 的圓環箭頭)
+  let rotating = false;
+  let rotateCenter = {x:0,y:0};
+  let currentAngle = 0; // degrees
+
+  rotateHandle.addEventListener('pointerdown', e=>{
+    e.preventDefault();
+    rotateHandle.setPointerCapture(e.pointerId);
+    rotating = true;
+    const center = getSquareCenter(sqC);
+    rotateCenter = center;
+  });
+
+  document.addEventListener('pointermove', e=>{
+    if(!rotating) return;
+    const wsRect = workspace.getBoundingClientRect();
+    const px = e.clientX - wsRect.left;
+    const py = e.clientY - wsRect.top;
+    // angle from center to pointer (0deg pointing up), adjust so handle at top corresponds to 0
+    const dx = px - rotateCenter.x;
+    const dy = py - rotateCenter.y;
+    const ang = Math.atan2(dy, dx) * 180 / Math.PI + 90; // +90 so that upward is 0
+    currentAngle = ang;
+    applyRotationToC(currentAngle);
+    updateRotateHandlePosition();
+    updateMeasurement();
+  });
+  document.addEventListener('pointerup', e=>{
+    if(rotating){ rotating = false; rotateHandle.releasePointerCapture(e.pointerId); }
+  });
+
+  function applyRotationToC(angle){
+    // set CSS transform rotate on sqC
+    sqC.style.transform = `rotate(${angle}deg)`;
+  }
+
+  // position the rotate handle above the center of sqC
+  function updateRotateHandlePosition(){
+    const cRect = sqC.getBoundingClientRect();
+    const wsRect = workspace.getBoundingClientRect();
+    // center in workspace coords
+    const centerX = cRect.left - wsRect.left + cRect.width/2;
+    const centerY = cRect.top - wsRect.top + cRect.height/2;
+    // place handle at a distance above the center equal to half the side + 26px
+    const side = cRect.width; // width equals height
+    const distance = side/2 + 28; // 28 to clear border
+    // compute position using currentAngle so handle stays at the top relative to rotated square
+    const rad = (currentAngle - 90) * Math.PI/180; // convert so 0deg means pointing up
+    const hx = centerX + Math.cos(rad) * distance - rotateHandle.offsetWidth/2;
+    const hy = centerY + Math.sin(rad) * distance - rotateHandle.offsetHeight/2;
+    rotateHandle.style.left = Math.round(hx) + 'px';
+    rotateHandle.style.top = Math.round(hy) + 'px';
+  }
+
+  // helper: get center of sqC in workspace coords
+  function getSquareCenter(el){
+    const wsRect = workspace.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    return { x: r.left - wsRect.left + r.width/2, y: r.top - wsRect.top + r.height/2 };
+  }
+
+  // snap and reset buttons
   document.getElementById('snapBtn').addEventListener('click', ()=>{
     const aRect = sqA.getBoundingClientRect();
     const wsRect = workspace.getBoundingClientRect();
     const x0 = 20; const y0 = 60;
     sqA.style.left = x0 + 'px'; sqA.style.top = y0 + 'px';
     sqB.style.left = (x0 + aRect.width) + 'px'; sqB.style.top = y0 + 'px';
-    // place √5 (C) below them, centered under A+B
     const maxH = Math.max(sqA.getBoundingClientRect().height, sqB.getBoundingClientRect().height);
     sqC.style.left = x0 + 'px';
     sqC.style.top = (y0 + maxH + 36) + 'px';
-    updateMeasurement();
+    currentAngle = 0; sqC.style.transform = `rotate(0deg)`;
+    updateRotateHandlePosition(); updateMeasurement();
   });
-
-  // reset button
   document.getElementById('resetBtn').addEventListener('click', ()=>{
     sqA.style.left = '30px'; sqA.style.top = '40px';
     sqB.style.left = '180px'; sqB.style.top = '120px';
     sqC.style.left = '360px'; sqC.style.top = '260px';
-    updateMeasurement();
+    currentAngle = 0; sqC.style.transform = `rotate(0deg)`;
+    updateRotateHandlePosition(); updateMeasurement();
   });
 
-  // draw measurement lines and labels
+  // measurement drawing (uses unrotated side length for √5 comparison)
   function updateMeasurement(){
-    // clear svg
     while(measureSvg.firstChild) measureSvg.removeChild(measureSvg.firstChild);
-
     const a = sqA.getBoundingClientRect();
     const b = sqB.getBoundingClientRect();
     const c = sqC.getBoundingClientRect();
@@ -155,7 +229,6 @@
 
     const ax = a.left - wsRect.left, ay = a.top - wsRect.top;
     const bx = b.left - wsRect.left, by = b.top - wsRect.top;
-    const cx = c.left - wsRect.left, cy = c.top - wsRect.top;
 
     const leftAB = Math.min(ax, bx);
     const rightAB = Math.max(ax + a.width, bx + b.width);
@@ -187,12 +260,13 @@
     rightArrow.setAttribute('y1', yLine); rightArrow.setAttribute('y2', yLine-6);
     rightArrow.setAttribute('stroke','#0f172a'); rightArrow.setAttribute('stroke-width','2'); measureSvg.appendChild(rightArrow);
 
-    // place √5 comparison line BELOW the A/B group to avoid overlap
+    // √5 comparison line BELOW the A/B group to avoid overlap
     const belowY = Math.max(ay, by) + Math.max(a.height, b.height) + 36; // sufficiently below
-    const cWidth = c.width;
+    // for √5 we want the true side length in px (unrotated). Use computed width style (which equals side length)
+    const cSide = parseFloat(getComputedStyle(sqC).width);
     const centerAB = (leftAB + rightAB) / 2;
-    const leftC = Math.max(8, centerAB - cWidth/2);
-    const rightC = leftC + cWidth;
+    const leftC = Math.max(8, centerAB - cSide/2);
+    const rightC = leftC + cSide;
 
     const line2 = document.createElementNS(svgns,'line');
     line2.setAttribute('x1', leftC + 2); line2.setAttribute('x2', rightC - 2);
@@ -200,9 +274,9 @@
     line2.setAttribute('stroke','#0f172a'); line2.setAttribute('stroke-width','3'); measureSvg.appendChild(line2);
 
     // labels
+    const combinedMath = (Math.sqrt(2) + Math.sqrt(3));
     const txt1 = document.createElementNS(svgns,'text');
     txt1.setAttribute('x', leftAB + 6); txt1.setAttribute('y', yLine - 8); txt1.setAttribute('font-size','13'); txt1.setAttribute('fill','#0f172a');
-    const combinedMath = (Math.sqrt(2) + Math.sqrt(3));
     txt1.textContent = `√2 + √3 = ${combinedMath.toFixed(3)}`;
     measureSvg.appendChild(txt1);
 
@@ -213,14 +287,14 @@
 
     // update measure box with pixel and math comparison
     const combinedPx = rightAB - leftAB;
-    const sqrt5Px = c.width;
+    const sqrt5Px = cSide;
     const combinedVal = combinedMath;
-    measureBox.innerHTML = `合併邊長 (像素): ${combinedPx.toFixed(0)} px &nbsp;&nbsp; | &nbsp;&nbsp; √2 + √3 = ${combinedVal.toFixed(6)} （約 ${ (combinedVal*parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--scale'))).toFixed(0) } px）<br>√5 = ${Math.sqrt(5).toFixed(6)} （約 ${ sqrt5Px.toFixed(0) } px）<br><strong style="color:#ef4444">結論：數值與像素明顯不同，故 √2 + √3 ≠ √5</strong>`;
+    measureBox.innerHTML = `合併邊長 (像素): ${combinedPx.toFixed(0)} px &nbsp;&nbsp; | &nbsp;&nbsp; √2 + √3 = ${combinedVal.toFixed(6)} （約 ${ (combinedVal*scale).toFixed(0) } px）<br>√5 = ${Math.sqrt(5).toFixed(6)} （約 ${ sqrt5Px.toFixed(0) } px）<br><strong style="color:#ef4444">結論：數值與像素明顯不同，故 √2 + √3 ≠ √5</strong>`;
   }
 
-  // initial update
-  window.addEventListener('load', ()=>{ updateMeasurement(); });
-  window.addEventListener('resize', ()=>{ updateMeasurement(); });
+  // initial setup
+  window.addEventListener('load', ()=>{ currentAngle = 0; applyRotationToC(0); updateRotateHandlePosition(); updateMeasurement(); });
+  window.addEventListener('resize', ()=>{ updateRotateHandlePosition(); updateMeasurement(); });
 
 })();
 </script>
